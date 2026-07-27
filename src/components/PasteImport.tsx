@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { extractApplications, extractPostings, extractTermStat } from '../lib/parse';
+import {
+  extractApplications,
+  extractPostings,
+  extractTermStat,
+  PartialExtractionError,
+} from '../lib/parse';
 import { MissingKeyError } from '../lib/llm';
 import type { Application, Posting, TermStat } from '../lib/types';
 
@@ -41,7 +46,11 @@ export default function PasteImport({
       }
       setText('');
     } catch (e) {
-      if (e instanceof MissingKeyError) {
+      if (e instanceof PartialExtractionError) {
+        // Keep what parsed; leave the paste text so the user can retry the rest.
+        onPostings(e.postings);
+        setError(e.message);
+      } else if (e instanceof MissingKeyError) {
         setError('Parsing needs an LLM. Add a free Gemini or Groq key in Settings — or load the demo data.');
       } else {
         setError(e instanceof Error ? e.message : 'Parsing failed.');

@@ -3,12 +3,6 @@ import type { FeatureExtractionPipeline } from '@huggingface/transformers';
 const MODEL = 'Xenova/all-MiniLM-L6-v2';
 
 let extractorPromise: Promise<FeatureExtractionPipeline> | null = null;
-let ready = false;
-
-/** True once the model is downloaded + initialized (no await needed). */
-export function embeddingsReady(): boolean {
-  return ready;
-}
 
 interface ProgressEvent {
   status?: string;
@@ -42,8 +36,8 @@ export function getExtractor(
     };
     // Dynamic import keeps transformers.js (~1 MB of JS) out of the main
     // bundle — it only loads when the Map tab is first opened.
-    extractorPromise = import('@huggingface/transformers').then(
-      ({ pipeline }) => {
+    extractorPromise = import('@huggingface/transformers')
+      .then(({ pipeline }) => {
         const opts = { dtype: 'q8', progress_callback: cb } as const;
         return pipeline('feature-extraction', MODEL, {
           ...opts,
@@ -53,27 +47,74 @@ export function getExtractor(
             pipeline('feature-extraction', MODEL, { ...opts, device: 'wasm' }),
           )
           .then((p) => {
-            ready = true;
             onProgress?.(100);
             return p;
           });
-      },
-    );
+      })
+      .catch((e: unknown) => {
+        // Never cache a rejected promise — a failed download would otherwise
+        // make every future call re-throw the stale error until a full page
+        // reload. Resetting lets re-opening the Map tab genuinely retry.
+        extractorPromise = null;
+        throw e;
+      });
   }
   return extractorPromise;
 }
 
-/** Embed texts → one normalized Float32Array[384] per text. */
+const EMBED_BATCH = 12;
+
+/**
+ * Embed texts → one normalized Float32Array[384] per text. Runs in
+ * mini-batches with a yield between them: one big forward pass over 100+
+ * postings on the WASM fallback means hundreds of MB of transient attention
+ * buffers and a multi-second main-thread freeze.
+ */
 export async function embed(
   texts: string[],
   onProgress?: (pct: number) => void,
 ): Promise<Float32Array[]> {
   const extractor = await getExtractor(onProgress);
-  const output = await extractor(texts, { pooling: 'mean', normalize: true });
-  const data = output.data as Float32Array;
-  const dims = output.dims;
-  const d = dims[dims.length - 1];
-  return texts.map((_, i) => data.slice(i * d, (i + 1) * d));
+  const out: Float32Array[] = [];
+  for (let i = 0; i < texts.length; i += EMBED_BATCH) {
+    const batch = texts.slice(i, i + EMBED_BATCH);
+    const output = await extractor(batch, { pooling: 'mean', normalize: true });
+    const data = output.data as Float32Array;
+    const dims = output.dims;
+    const d = dims[dims.length - 1];
+    for (let j = 0; j < batch.length; j++) {
+      out.push(data.slice(j * d, (j + 1) * d));
+    }
+    // Yield to the event loop between batches so the UI can paint.
+    if (i + EMBED_BATCH < texts.length) {
+      await new Promise((r) => setTimeout(r, 0));
+    }
+  }
+  return out;
+}
+
+// Module-level vector cache keyed by posting id + text, so Map tab revisits
+// and preference reblends reuse vectors instead of redoing the forward pass.
+const vectorCache = new Map<string, Float32Array>();
+
+/** Embed postings through the cache; only misses hit the model. */
+export async function embedPostings(
+  items: { id: string; text: string }[],
+  onProgress?: (pct: number) => void,
+): Promise<Float32Array[]> {
+  const keys = items.map((it) => `${it.id}\u0000${it.text}`);
+  const missing: number[] = [];
+  keys.forEach((k, i) => {
+    if (!vectorCache.has(k)) missing.push(i);
+  });
+  if (missing.length > 0) {
+    const vectors = await embed(
+      missing.map((i) => items[i].text),
+      onProgress,
+    );
+    missing.forEach((i, j) => vectorCache.set(keys[i], vectors[j]));
+  }
+  return keys.map((k) => vectorCache.get(k)!);
 }
 
 /** Vectors are normalized, so cosine similarity is just the dot product. */

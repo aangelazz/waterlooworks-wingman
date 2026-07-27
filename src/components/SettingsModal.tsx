@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { chatJSON } from '../lib/llm';
 import { getApiKey, getProvider, setApiKey, setProvider } from '../lib/storage';
 import type { Provider } from '../lib/types';
 
@@ -11,12 +12,56 @@ export default function SettingsModal({
 }) {
   const [provider, setProviderState] = useState<Provider>(getProvider());
   const [key, setKey] = useState(getApiKey());
+  const [checking, setChecking] = useState(false);
+  const [checkResult, setCheckResult] = useState<{
+    ok: boolean;
+    message: string;
+  } | null>(null);
 
-  const save = () => {
+  const save = async () => {
+    const trimmed = key.trim();
     setProvider(provider);
-    setApiKey(key.trim());
+    setApiKey(trimmed);
     onSaved();
-    onClose();
+    if (!trimmed) {
+      onClose();
+      return;
+    }
+    // Validate the key with a tiny live call so a typo'd key is caught here
+    // instead of on the first real (quota-burning) parse or rank.
+    setChecking(true);
+    setCheckResult(null);
+    try {
+      await chatJSON<{ ok: boolean }>(
+        'You are a connectivity check. Respond with JSON only.',
+        'Return exactly {"ok": true}',
+        {
+          type: 'object',
+          properties: { ok: { type: 'boolean' } },
+          required: ['ok'],
+        },
+      );
+      setCheckResult({ ok: true, message: '✓ Key verified — you’re set.' });
+      setTimeout(onClose, 900);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'unknown error';
+      // A 429 means the key itself is valid; the provider is just out of
+      // free-tier quota right now. Don't frame that as a broken key.
+      if (msg.includes('429')) {
+        setCheckResult({
+          ok: true,
+          message:
+            '✓ Key works, but its free-tier quota is used up right now. Quota resets daily, or create a fresh key in a new project.',
+        });
+      } else {
+        setCheckResult({
+          ok: false,
+          message: `Key saved, but the test call failed: ${msg}`,
+        });
+      }
+    } finally {
+      setChecking(false);
+    }
   };
 
   return (
@@ -93,11 +138,22 @@ export default function SettingsModal({
           you chose. There is no backend.
         </p>
 
+        {checkResult && (
+          <p
+            className={`mt-3 text-sm ${
+              checkResult.ok ? 'text-emerald-600' : 'text-rose-600'
+            }`}
+          >
+            {checkResult.message}
+          </p>
+        )}
+
         <div className="mt-5 flex justify-end gap-2">
           <button
             onClick={() => {
               setKey('');
               setApiKey('');
+              setCheckResult(null);
               onSaved();
             }}
             className="rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-100"
@@ -105,10 +161,11 @@ export default function SettingsModal({
             Clear key
           </button>
           <button
-            onClick={save}
-            className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600"
+            onClick={() => void save()}
+            disabled={checking}
+            className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Save
+            {checking ? 'Checking key…' : 'Save'}
           </button>
         </div>
       </div>

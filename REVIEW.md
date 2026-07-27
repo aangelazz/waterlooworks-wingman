@@ -126,3 +126,43 @@ Method: full read of every source file, `npm run build` (passes — Nix npm per 
 - **Fast paths (harness-verified):** TSV 0-row/1-row, line-block single record, blank-line field preservation, footer rejection via `/^\d+$/`; `chunkPostingText` is lossless (char-preserving) and respects the 12k cap including the hardSplit path.
 - **Build:** `tsc -b && vite build` passes clean; main chunk 246 kB, transformers.js correctly split out via dynamic import.
 - **Trivial:** `embeddingsReady()` in `embeddings.ts:9` is exported but unused — delete when touching the file.
+
+---
+
+# Re-review (fix pass 1)
+
+Reviewer: pragmatic-code-reviewer (subagent), round 2 · Scope: `git diff` vs HEAD (the entire fix pass — 10 files).
+Method: full read of every changed file plus surrounding code (`PreferencesBar`, `cluster.ts`, `score.ts` call paths), `npm run build` re-run (passes: zero TS errors, main chunk 248.33 kB — matches the coder's claim), and a `/tmp/ww-reverify` harness confirming analyze batch-boundary math is lossless at n=0/1/24/25/26/50/51/60 and `embedPostings` cache alignment (fill / partial-hit / text-change bust return correctly ordered vectors and only embed the misses).
+
+## Verdict
+
+**Approve with optional suggestions.** All eight scoped fixes (P0 batching, fetch timeout, extractor-promise reset, partial extraction, embed mini-batching + cache, key-validation ping, mergeById dedupe, simScores ref) are implemented correctly and work as claimed. No new bugs found. Zero required findings; 4 optional suggestions.
+
+## Fix-by-fix verification
+
+1. **P0 — analyze() batching (`agent.ts:68-152`): correct.** Slice loop is lossless at every boundary (harness). `byId` and the positional fallback (`items.length === batch.length`) are both scoped per batch, so cross-batch wiring is impossible. `retier()` runs exactly once over the merged set on success; the partial path retiers only the completed subset — and App's `reblend` re-retiers idempotently, so no double-tier skew. Batch of 25 ≈ 2.5–5k output tokens (Gemini cap safe) and ≈ 4–5k input tokens (Groq TPM safe).
+2. **P0 partial-failure UX (`App.tsx:85-112`, `PreferencesBar.tsx:19-26`): correct.** On `PartialAnalysisError`: partial analyses are set (reblended with fresh sims), tab stays on shortlist, `finally` clears `ranking`, and the rethrow lands in PreferencesBar's catch → error text renders *below* the still-visible partial tier list. No double-set, no lost render — ranking can only start from the shortlist tab, so `setTab('shortlist')` never remounts PreferencesBar and the error state survives. When batch 1 fails (`analyses.length === 0`) the original error propagates, preserving the old UX.
+3. **P1 — fetch timeout (`llm.ts:131-160`): correct.** Fresh `AbortSignal.timeout(60s)` per attempt; the try/catch wraps only the `fetch`, so 429/5xx retry+backoff and the 400/401/403 key messaging are untouched; `chatJSON`'s parse-retry is also unaffected (`callProvider` sits outside its try). Timeout maps to a readable `LLMError`. Timeouts are deliberately not retried — reasonable at 60 s.
+4. **P1 — extractor promise reset (`embeddings.ts:39-61`): correct, no race.** The reset lives in the failed chain's own `.catch`, and a new chain can only be created after that reset fires — concurrent awaiters both observe the rejection, the next `getExtractor()` genuinely retries. WebGPU→WASM fallback preserved (inner `.catch`); a WASM-success path never resets. `embeddingsReady` deleted with no dangling references.
+5. **P1 — partial extraction (`parse.ts:396-441`, `PasteImport.tsx:49-52`): correct.** Mid-loop failure with ≥1 parsed posting throws `PartialExtractionError` carrying `all`; zero-progress failures rethrow the original (so `MissingKeyError` handling is preserved — checked order of `instanceof` branches). PasteImport keeps the paste text (cleared only on full success), merges the partial postings, and shows the count message.
+6. **P1 — embed mini-batches + cache (`embeddings.ts:64-118`, `SimilarityMap.tsx:56-72`): correct.** `setTimeout(0)` is a macrotask yield (paint happens between batches, unlike a microtask); batch of 12 bounds each blocking WASM pass. Cache keyed `id\0text` busts on text change and can't serve stale vectors after re-paste/dedupe (harness-verified alignment). Critically, cached vectors are now *shared* across Map visits — I verified `pca2d`, `kmeans`, `cosine`, and `simScoresFor` never mutate their input vectors (`cluster.ts` copies into fresh `Float64Array`s), so the cache can't be corrupted. Pref text embeds separately per effect run (1 text — cheap) and sim-score semantics match the old `vectors[0]`/`slice(1)` split.
+7. **P2 — key validation ping (`SettingsModal.tsx:21-56`): works.** Key is saved before the ping (message says so — state never inconsistent), Save disables during check, and the ✕/backdrop close still works so the modal can't wedge even through the worst-case retry+timeout window. See optional #1 on the 429 message.
+8. **P2 — mergeById intra-batch dedupe (`App.tsx:253-266`): correct.** First occurrence wins within `incoming`; prior order semantics (incoming first, surviving prev appended) preserved. Applies to applications merges too.
+9. **P2 — simScores ref (`App.tsx:41-48, 85-117`): correct.** Ref is cleared everywhere the old state was (loadDemo/addPostings/clearAll), re-read after the analyze await, and the reblend-after-embeddings path (`handleSimScores`) is unchanged. Persistence round-trip unaffected (sim scores were never persisted before either; persisted analyses still carry their blended `simScore` fields).
+10. **Error-class hygiene:** single-bundle `instanceof` is safe; `erasableSyntaxOnly` workaround (plain field declarations) is correct; ES2023 target means `Error` subclassing keeps prototype identity.
+
+## Findings
+
+No required findings.
+
+- Optional: `src/components/SettingsModal.tsx:47-53` — a quota-exhausted-but-valid key surfaces as "Key saved, but the test call failed: LLM request failed (429): …", which reads like a bad key. A 429 actually proves the key authenticated. Smallest fix: special-case `/\(429\)/` in the message → "key looks valid, but the provider is rate-limiting you right now — try ranking in a minute."
+- Optional: `src/components/SettingsModal.tsx:131-143` — "Clear key" stays enabled while the check is in flight; clearing then having the ping succeed shows "✓ Key verified" and auto-closes with no key stored. Disable Clear while `checking`, or drop stale results with a token check.
+- Optional: `src/lib/agent.ts:111` + `src/lib/parse.ts:434` — both partial-failure messages imply resumability ("…for the rest", "paste the remaining postings"), but retry re-runs every batch/chunk from scratch (dedupe makes it correct, just quota-burning), and the user can't tell which postings "remain" in the retained paste. Fine for demo; a wording tweak ("rank/parse again in a minute — already-done work is kept") would set expectations honestly.
+- Optional: `README.md:19` — "One batched LLM call judges fit for each posting" is now factually stale: the fix pass made it multiple batched calls (~25 postings each). One-word fix ("Batched LLM calls judge…").
+
+## Notes
+
+- Out-of-scope P2s (debounced saves, list-view shared raw, per-provider key slots, progress-callback pinning, TSV quirks) were re-checked only for interaction with the fixes — none was made worse. The vector cache actually *softens* #5's re-embed cost, and the progress-callback pinning (#10) is unchanged.
+- `vectorCache` is unbounded but ~1.5 kB/entry — irrelevant at realistic scale; not worth eviction logic.
+- Cosmetic: with all vectors cached and no pref text, the Map tab flashes the "Downloading the embedding model… 0%" panel for one frame before `ready`. Not worth fixing.
+- Build verified: `tsc -b && vite build` clean via Nix npm 11.12.1 / Node 24.15.0; chunk sizes match BUILDLOG's fix-pass appendix.

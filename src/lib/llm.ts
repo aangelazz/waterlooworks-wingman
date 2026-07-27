@@ -128,6 +128,8 @@ async function callGroq(
   return text;
 }
 
+const FETCH_TIMEOUT_MS = 60_000;
+
 /** POST with a single retry+backoff on 429/5xx (free tiers rate-limit hard). */
 async function postWithRetry(
   url: string,
@@ -135,7 +137,26 @@ async function postWithRetry(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<any> {
   for (let attempt = 0; ; attempt++) {
-    const res = await fetch(url, { method: 'POST', ...init });
+    let res: Response;
+    try {
+      // Timeout guards against hung connections that never error out —
+      // without it the UI stays stuck on "Parsing…"/"Ranking…" forever.
+      res = await fetch(url, {
+        method: 'POST',
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        ...init,
+      });
+    } catch (e) {
+      if (
+        e instanceof DOMException &&
+        (e.name === 'TimeoutError' || e.name === 'AbortError')
+      ) {
+        throw new LLMError(
+          'Request timed out after 60 seconds — check your connection and try again.',
+        );
+      }
+      throw e;
+    }
     if (res.ok) return res.json();
     const retryable = res.status === 429 || res.status >= 500;
     if (retryable && attempt === 0) {

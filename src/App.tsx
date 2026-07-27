@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PasteImport from './components/PasteImport';
 import PreferencesBar from './components/PreferencesBar';
 import SettingsModal from './components/SettingsModal';
 import SimilarityMap from './components/SimilarityMap';
 import TierList from './components/TierList';
 import Tracker from './components/Tracker';
-import { analyze, reblend } from './lib/agent';
+import { analyze, PartialAnalysisError, reblend } from './lib/agent';
 import { demoApplications, demoPostings, demoTermStat } from './lib/demoData';
 import { hasApiKey, loadState, saveState } from './lib/storage';
 import type {
@@ -41,7 +41,10 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [keyTick, setKeyTick] = useState(0);
   const [ranking, setRanking] = useState(false);
-  const [simScores, setSimScores] = useState<Map<string, number> | null>(null);
+  // A ref (not state) so handleRank always reads the freshest scores — a
+  // state value captured at click time goes stale if embeddings finish while
+  // the analyze call is in flight.
+  const simScoresRef = useRef<Map<string, number> | null>(null);
 
   // keyTick invalidates the memo whenever the settings modal saves/clears.
   const keyed = useMemo(() => hasApiKey(), [keyTick]);
@@ -62,13 +65,13 @@ export default function App() {
     setApplications(demoApplications);
     setTermStat(demoTermStat);
     setAnalyses([]);
-    setSimScores(null);
+    simScoresRef.current = null;
   }, []);
 
   const addPostings = useCallback((incoming: Posting[]) => {
     setPostings((prev) => mergeById(prev, incoming));
     setAnalyses([]);
-    setSimScores(null);
+    simScoresRef.current = null;
   }, []);
 
   const addApplications = useCallback(
@@ -82,16 +85,31 @@ export default function App() {
   const handleRank = useCallback(async () => {
     setRanking(true);
     try {
-      const result = await analyze(postings, { freeText: prefText }, simScores);
-      setAnalyses(result);
+      const result = await analyze(
+        postings,
+        { freeText: prefText },
+        simScoresRef.current,
+      );
+      // Re-read the ref after the await: embeddings may have finished while
+      // the LLM call was in flight.
+      const sims = simScoresRef.current;
+      setAnalyses(sims ? reblend(result, sims) : result);
       setTab('shortlist');
+    } catch (e) {
+      if (e instanceof PartialAnalysisError) {
+        // Keep the batches that completed; the error still surfaces below.
+        const sims = simScoresRef.current;
+        setAnalyses(sims ? reblend(e.analyses, sims) : e.analyses);
+        setTab('shortlist');
+      }
+      throw e;
     } finally {
       setRanking(false);
     }
-  }, [postings, prefText, simScores]);
+  }, [postings, prefText]);
 
   const handleSimScores = useCallback((scores: Map<string, number>) => {
-    setSimScores(scores);
+    simScoresRef.current = scores;
     setAnalyses((prev) => (prev.length > 0 ? reblend(prev, scores) : prev));
   }, []);
 
@@ -100,7 +118,7 @@ export default function App() {
     setApplications([]);
     setAnalyses([]);
     setTermStat(null);
-    setSimScores(null);
+    simScoresRef.current = null;
   }, []);
 
   const hasData = postings.length > 0 || applications.length > 0;
@@ -233,6 +251,17 @@ export default function App() {
 }
 
 function mergeById<T extends { id: string }>(prev: T[], incoming: T[]): T[] {
-  const ids = new Set(incoming.map((x) => x.id));
-  return [...incoming, ...prev.filter((x) => !ids.has(x.id))];
+  // Dedupe within the incoming batch too, so re-pasting the same content
+  // (or a paste with a repeated row) never creates duplicate rows.
+  const ids = new Set<string>();
+  const merged: T[] = [];
+  for (const item of incoming) {
+    if (ids.has(item.id)) continue;
+    ids.add(item.id);
+    merged.push(item);
+  }
+  for (const item of prev) {
+    if (!ids.has(item.id)) merged.push(item);
+  }
+  return merged;
 }

@@ -393,6 +393,21 @@ interface RawPosting {
   deadline?: string | null;
 }
 
+/**
+ * Thrown when some posting chunks parsed before a call failed — carries the
+ * postings that did parse so the UI can keep them instead of losing the lot.
+ */
+export class PartialExtractionError extends Error {
+  postings: Posting[];
+  failedChunks: number;
+  constructor(message: string, postings: Posting[], failedChunks: number) {
+    super(message);
+    this.name = 'PartialExtractionError';
+    this.postings = postings;
+    this.failedChunks = failedChunks;
+  }
+}
+
 export async function extractPostings(text: string): Promise<Posting[]> {
   const system = `You extract structured job data from text a student copy-pasted from WaterlooWorks job postings (University of Waterloo co-op portal). Postings use these section labels: "Job ID" (in the heading), "Job Title", "Organization", "Division", "Job location", "Employment location arrangement" (in-person / remote / hybrid), "Work term duration", "Job summary", "Job responsibilities", "Required skills", "Compensation and benefits information", "Targeted degrees and disciplines", "Application Deadline". Application counts appear as "N applications" and openings as "Number of Job Openings" or "N openings". Rules: a field you cannot find is null — NEVER invent values, especially numbers. Extract hourlyRate as a number only when the compensation text explicitly states an hourly figure (use the midpoint of a range). Keep summary to at most 3 sentences; keep skills as the raw skills text. One item per distinct posting.`;
 
@@ -400,12 +415,27 @@ export async function extractPostings(text: string): Promise<Posting[]> {
   const all: Posting[] = [];
   const seen = new Set<string>();
 
-  for (const chunk of chunks) {
-    const result = await chatJSON<{ items: RawPosting[] }>(
-      system,
-      `Extract every job posting from this paste:\n\n${chunk}`,
-      postingsSchema,
-    );
+  for (let ci = 0; ci < chunks.length; ci++) {
+    const chunk = chunks[ci];
+    let result: { items: RawPosting[] };
+    try {
+      result = await chatJSON<{ items: RawPosting[] }>(
+        system,
+        `Extract every job posting from this paste:\n\n${chunk}`,
+        postingsSchema,
+      );
+    } catch (e) {
+      // A mid-loop failure (e.g. a 429 on free tier) must not discard the
+      // chunks that already parsed.
+      if (all.length === 0) throw e;
+      const failed = chunks.length - ci;
+      const reason = e instanceof Error ? e.message : 'request failed';
+      throw new PartialExtractionError(
+        `Parsed ${all.length} posting${all.length === 1 ? '' : 's'}, but ${failed} of ${chunks.length} chunks failed (${reason}). Wait a minute and paste the remaining postings again.`,
+        all,
+        failed,
+      );
+    }
     const items = Array.isArray(result?.items) ? result.items : [];
     const segments = splitPostingSegments(chunk);
     for (const p of items) {

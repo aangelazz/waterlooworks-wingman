@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { embed, simScoresFor } from '../lib/embeddings';
+import { embed, embedPostings, simScoresFor } from '../lib/embeddings';
 import { kmeans, pca2d, pickK } from '../lib/cluster';
 import type { AgentAnalysis, Posting, Preferences, Tier } from '../lib/types';
 
@@ -56,15 +56,19 @@ export default function SimilarityMap({
 
     (async () => {
       // Truncate raw text — MiniLM only attends to ~256 tokens anyway.
-      const texts = postings.map((p) => p.raw.slice(0, 1200));
-      const inputs = prefText ? [prefText, ...texts] : texts;
-      const vectors = await embed(inputs, setProgress);
+      // Posting vectors go through the module-level cache, so tab revisits
+      // and preference reblends only embed what changed.
+      const postingVecs = await embedPostings(
+        postings.map((p) => ({ id: p.id, text: p.raw.slice(0, 1200) })),
+        setProgress,
+      );
       if (cancelled) return;
 
-      const postingVecs = prefText ? vectors.slice(1) : vectors;
       if (prefText) {
+        const [prefVec] = await embed([prefText], setProgress);
+        if (cancelled) return;
         onSimScores(
-          simScoresFor(vectors[0], postingVecs, postings.map((p) => p.id)),
+          simScoresFor(prefVec, postingVecs, postings.map((p) => p.id)),
         );
       }
 
