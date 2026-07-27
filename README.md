@@ -1,4 +1,4 @@
-# WaterlooWorks Wingman <img width="50" height="50" alt="image" src="https://github.com/user-attachments/assets/112364ba-0828-4fef-8ac3-303a179ac6f3" />
+# WaterlooWorks Wingman <img width="10" height="10" alt="image" src="https://github.com/user-attachments/assets/112364ba-0828-4fef-8ac3-303a179ac6f3" />
 
 
 A privacy-first copilot for UWaterloo co-op applications. Paste your WaterlooWorks postings and your "My Applications" page, and Wingman turns them into a real application tracker, an odds score for every posting, and a ranked shortlist that matches what you actually want. There is no backend, no scraping, and no login. Your data stays in your browser, and the AI runs on your own free-tier key.
