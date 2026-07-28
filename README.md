@@ -20,13 +20,17 @@ WaterlooWorks is rough. The Applied To view is such a weak tracker that students
 
 ## Screenshots
 
-<!-- TODO: add screenshots -->
-| Tracker | Tier list | Similarity map |
-|---|---|---|
-| <img width="1052" height="647" alt="Screenshot 2026-07-28 at 1 23 07 PM" src="https://github.com/user-attachments/assets/5ee988b5-655a-4781-a44c-6997d46f0d15" />
-| <img width="1059" height="803" alt="Screenshot 2026-07-28 at 1 23 23 PM" src="https://github.com/user-attachments/assets/00b4a82e-839b-49f3-8284-248eb60550c2" />
- | <img width="1055" height="749" alt="Screenshot 2026-07-28 at 1 23 40 PM" src="https://github.com/user-attachments/assets/ddebac2f-21ea-4bf2-8fde-c4e4eb3e64fb" />
- |
+### Tracker
+
+<img alt="Application tracker: status pills, funnel counts, interview rate, and term quota" src="https://github.com/user-attachments/assets/5ee988b5-655a-4781-a44c-6997d46f0d15" width="100%" />
+
+### Tier list
+
+<img alt="Preference-ranked S/A/B/C tier list with odds badges, flags, and rationale" src="https://github.com/user-attachments/assets/00b4a82e-839b-49f3-8284-248eb60550c2" width="100%" />
+
+### Similarity map
+
+<img alt="In-browser embedding similarity map with cluster colors and tier rings" src="https://github.com/user-attachments/assets/ddebac2f-21ea-4bf2-8fde-c4e4eb3e64fb" width="100%" />
 
 ## Quickstart
 
