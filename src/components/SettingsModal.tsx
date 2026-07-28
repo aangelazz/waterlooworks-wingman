@@ -41,7 +41,7 @@ export default function SettingsModal({
           required: ['ok'],
         },
       );
-      setCheckResult({ ok: true, message: '✓ Key verified — you’re set.' });
+      setCheckResult({ ok: true, message: 'Key verified — you’re set.' });
       setTimeout(onClose, 900);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'unknown error';
@@ -51,7 +51,7 @@ export default function SettingsModal({
         setCheckResult({
           ok: true,
           message:
-            '✓ Key works, but its free-tier quota is used up right now. Quota resets daily, or create a fresh key in a new project.',
+            'Key works, but its free-tier quota is used up right now. Quota resets daily, or create a fresh key in a new project.',
         });
       } else {
         setCheckResult({
@@ -66,34 +66,44 @@ export default function SettingsModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+        className="w-full max-w-md rounded-xl border border-edge-strong bg-surface p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-800">Settings — bring your own key</h2>
+          <h2 className="font-display text-lg text-ink">Settings — bring your own key</h2>
           <button
             onClick={onClose}
             aria-label="Close settings"
-            className="rounded-lg px-2 py-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="rounded-md p-1.5 text-ink-faint transition hover:bg-surface-2 hover:text-ink"
           >
-            ✕
+            <svg
+              aria-hidden
+              viewBox="0 0 16 16"
+              className="h-3.5 w-3.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+            >
+              <path d="M3 3l10 10M13 3L3 13" />
+            </svg>
           </button>
         </div>
 
-        <label className="mb-1 block text-sm font-medium text-slate-700">LLM provider</label>
+        <label className="mb-1 block text-sm font-medium text-ink">LLM provider</label>
         <div className="mb-4 flex gap-2">
           {(['gemini', 'groq'] as const).map((p) => (
             <button
               key={p}
               onClick={() => setProviderState(p)}
-              className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition ${
+              className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium transition ${
                 provider === p
-                  ? 'border-amber-400 bg-amber-50 text-amber-800'
-                  : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                  ? 'border-accent/50 bg-accent/10 text-accent'
+                  : 'border-edge-strong text-ink-mid hover:bg-surface-2'
               }`}
             >
               {p === 'gemini' ? 'Google Gemini (recommended)' : 'Groq (Llama 3.3)'}
@@ -101,7 +111,7 @@ export default function SettingsModal({
           ))}
         </div>
 
-        <label htmlFor="apikey" className="mb-1 block text-sm font-medium text-slate-700">
+        <label htmlFor="apikey" className="mb-1 block text-sm font-medium text-ink">
           API key
         </label>
         <input
@@ -110,15 +120,15 @@ export default function SettingsModal({
           value={key}
           onChange={(e) => setKey(e.target.value)}
           placeholder={provider === 'gemini' ? 'AIza…' : 'gsk_…'}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+          className="w-full rounded-md border border-edge-strong bg-bg px-3 py-2 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
         />
-        <p className="mt-2 text-xs text-slate-500">
+        <p className="mt-2 text-xs text-ink-mid">
           Free keys:{' '}
           <a
             href="https://aistudio.google.com/apikey"
             target="_blank"
             rel="noreferrer"
-            className="text-amber-700 underline"
+            className="text-accent underline decoration-accent/40 underline-offset-2 hover:text-accent-hover"
           >
             aistudio.google.com/apikey
           </a>{' '}
@@ -127,13 +137,13 @@ export default function SettingsModal({
             href="https://console.groq.com/keys"
             target="_blank"
             rel="noreferrer"
-            className="text-amber-700 underline"
+            className="text-accent underline decoration-accent/40 underline-offset-2 hover:text-accent-hover"
           >
             console.groq.com/keys
           </a>{' '}
           (Groq)
         </p>
-        <p className="mt-2 text-xs text-slate-400">
+        <p className="mt-2 text-xs text-ink-faint">
           Your key is stored only in this browser’s localStorage and sent only to the provider
           you chose. There is no backend.
         </p>
@@ -141,7 +151,7 @@ export default function SettingsModal({
         {checkResult && (
           <p
             className={`mt-3 text-sm ${
-              checkResult.ok ? 'text-emerald-600' : 'text-rose-600'
+              checkResult.ok ? 'text-emerald-300' : 'text-rose-300'
             }`}
           >
             {checkResult.message}
@@ -156,14 +166,14 @@ export default function SettingsModal({
               setCheckResult(null);
               onSaved();
             }}
-            className="rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-100"
+            className="rounded-md px-3 py-2 text-sm text-ink-mid transition hover:bg-surface-2 hover:text-ink"
           >
             Clear key
           </button>
           <button
             onClick={() => void save()}
             disabled={checking}
-            className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-accent-ink transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             {checking ? 'Checking key…' : 'Save'}
           </button>

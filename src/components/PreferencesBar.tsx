@@ -25,8 +25,8 @@ export default function PreferencesBar({
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <label htmlFor="prefs" className="mb-1 block text-sm font-medium text-slate-700">
+    <div className="rounded-lg border border-edge bg-surface p-4">
+      <label htmlFor="prefs" className="mb-1.5 block text-sm font-medium text-ink">
         Your preferences
       </label>
       <div className="flex flex-col gap-2 sm:flex-row">
@@ -39,21 +39,21 @@ export default function PreferencesBar({
             if (e.key === 'Enter' && canRank && !ranking) void handleRank();
           }}
           placeholder='e.g. "remote or Toronto, React/TypeScript, small product teams, $30+/hr"'
-          className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+          className="flex-1 rounded-md border border-edge-strong bg-bg px-3 py-2 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
         />
         <button
           onClick={() => void handleRank()}
           disabled={!canRank || ranking}
-          className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-accent-ink transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
           {ranking ? 'Ranking…' : 'Rank my jobs'}
         </button>
       </div>
-      <p className="mt-1.5 text-xs text-slate-400">
+      <p className="mt-2 text-xs text-ink-faint">
         Blended score: 55% LLM fit + 25% competition odds + 20% semantic similarity (odds are
         computed deterministically — the AI can’t fudge them).
       </p>
-      {error && <p className="mt-2 text-sm text-rose-600">{error}</p>}
+      {error && <p className="mt-2 text-sm text-rose-300">{error}</p>}
     </div>
   );
 }

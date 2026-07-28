@@ -3,12 +3,13 @@ import { embed, embedPostings, simScoresFor } from '../lib/embeddings';
 import { kmeans, pca2d, pickK } from '../lib/cluster';
 import type { AgentAnalysis, Posting, Preferences, Tier } from '../lib/types';
 
-const CLUSTER_COLORS = ['#6366f1', '#10b981', '#f97316', '#ec4899', '#0ea5e9', '#a855f7'];
+// Muted-for-dark cluster palette: separable hues, low saturation.
+const CLUSTER_COLORS = ['#8f9bd4', '#7fbf9b', '#d29a6a', '#c489a6', '#7fb0c9', '#a68fce'];
 const TIER_RING: Record<Tier, string> = {
-  S: '#f59e0b',
-  A: '#10b981',
-  B: '#38bdf8',
-  C: '#cbd5e1',
+  S: '#e0aa4f',
+  A: '#7fbf9b',
+  B: '#7fb0c9',
+  C: '#57534e',
 };
 
 // viewBox aspect used for both the SVG and the wrapper, so the percent-based
@@ -111,9 +112,9 @@ export default function SimilarityMap({
 
   if (postings.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
-        <p className="text-lg font-medium text-slate-600">Nothing to map yet</p>
-        <p className="mt-1 text-sm">
+      <div className="rounded-lg border border-dashed border-edge-strong bg-surface p-10 text-center text-ink-mid">
+        <p className="font-display text-lg text-ink">Nothing to map yet</p>
+        <p className="mt-1.5 text-sm">
           Load postings first (paste or demo data) — then this tab embeds every posting with an
           on-device transformer and lays out the whole job landscape.
         </p>
@@ -128,57 +129,80 @@ export default function SimilarityMap({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ink-faint">
         <span>
-          MiniLM embeddings running <span className="font-medium">in this tab</span> (WebGPU,
-          WASM fallback) → PCA → k-means. Nothing leaves your browser.
+          MiniLM embeddings running <span className="font-medium text-ink-mid">in this tab</span>{' '}
+          (WebGPU, WASM fallback) → PCA → k-means. Nothing leaves your browser.
         </span>
         {status === 'ready' && analyses.length > 0 && (
           <span className="flex items-center gap-2">
             {(['S', 'A', 'B', 'C'] as const).map((t) => (
               <span key={t} className="flex items-center gap-1">
                 <span
-                  className="inline-block h-2.5 w-2.5 rounded-full border-2 bg-white"
+                  className="inline-block h-2.5 w-2.5 rounded-full border-2 bg-surface"
                   style={{ borderColor: TIER_RING[t] }}
                 />
                 {t}
               </span>
             ))}
-            <span className="text-slate-400">tier rings</span>
+            <span className="text-ink-faint">tier rings</span>
           </span>
         )}
       </div>
 
       {status === 'loading' && (
-        <div className="rounded-xl border border-slate-200 bg-white p-6">
-          <p className="mb-2 text-sm text-slate-600">
+        <div className="rounded-lg border border-edge bg-surface p-6">
+          <p className="mb-2 text-sm text-ink-mid">
             Downloading the embedding model (~25 MB, one-time — cached after)…
           </p>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-edge">
             <div
-              className="h-full rounded-full bg-amber-500 transition-all"
+              className="h-full rounded-full bg-accent transition-all"
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="mt-1 text-right text-xs text-slate-400">{progress}%</p>
+          <p className="mt-1 text-right text-xs tabular-nums text-ink-faint">{progress}%</p>
         </div>
       )}
 
       {status === 'error' && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-300">
           {error}
         </div>
       )}
 
       {status === 'ready' && (
         <div
-          className="relative w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+          className="relative w-full overflow-hidden rounded-lg border border-edge bg-bg"
           style={{ aspectRatio: `${VW} / ${VH}` }}
         >
           <svg viewBox={`0 0 ${VW} ${VH}`} className="h-full w-full">
+            {/* Subtle grid so the plot reads as a map, not a void. */}
+            {[20, 40, 60, 80].map((gx) => (
+              <line
+                key={`gx${gx}`}
+                x1={gx}
+                y1={0}
+                x2={gx}
+                y2={VH}
+                stroke="#292420"
+                strokeWidth={0.15}
+              />
+            ))}
+            {[20, 40].map((gy) => (
+              <line
+                key={`gy${gy}`}
+                x1={0}
+                y1={gy}
+                x2={VW}
+                y2={gy}
+                stroke="#292420"
+                strokeWidth={0.15}
+              />
+            ))}
             {points.map((pt) => {
               const analysis = analysisById.get(pt.postingId);
-              const ring = analysis ? TIER_RING[analysis.tier] : '#e2e8f0';
+              const ring = analysis ? TIER_RING[analysis.tier] : '#3a332c';
               const isHover = hover?.postingId === pt.postingId;
               return (
                 <circle
@@ -199,7 +223,7 @@ export default function SimilarityMap({
           </svg>
           {hover && hoverPosting && (
             <div
-              className="pointer-events-none absolute z-10 max-w-56 -translate-x-1/2 rounded-lg bg-slate-900 px-3 py-2 text-xs text-white shadow-lg"
+              className="pointer-events-none absolute z-10 max-w-56 -translate-x-1/2 rounded-md border border-edge-strong bg-surface px-3 py-2 text-xs text-ink"
               style={{
                 left: `${(hover.x / VW) * 100}%`,
                 top: `${(hover.y / VH) * 100}%`,
@@ -207,15 +231,15 @@ export default function SimilarityMap({
               }}
             >
               <p className="font-semibold">{hoverPosting.title}</p>
-              <p className="text-slate-300">{hoverPosting.organization}</p>
+              <p className="text-ink-mid">{hoverPosting.organization}</p>
               {hoverAnalysis && (
-                <p className="mt-0.5 text-slate-300">
+                <p className="mt-0.5 text-ink-mid">
                   Tier {hoverAnalysis.tier} · final {hoverAnalysis.finalScore}/100
                 </p>
               )}
             </div>
           )}
-          <p className="absolute bottom-2 left-3 text-[10px] text-slate-400">
+          <p className="absolute bottom-2 left-3 text-[10px] text-ink-faint">
             {points.length} postings · {k} semantic cluster{k === 1 ? '' : 's'} · similar jobs
             sit closer together
           </p>

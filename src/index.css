@@ -1,1 +1,40 @@
+@import "@fontsource-variable/fraunces";
+@import "@fontsource-variable/instrument-sans";
 @import "tailwindcss";
+
+@theme {
+  /* Type. Fraunces (editorial serif) for display; Instrument Sans for body/UI. */
+  --font-sans: "Instrument Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces Variable", Georgia, "Times New Roman", serif;
+
+  /* Warm dark palette. */
+  --color-bg: #0f0d0b;
+  --color-surface: #181512;
+  --color-surface-2: #211d19;
+  --color-edge: #292420;
+  --color-edge-strong: #3a332c;
+  --color-ink: #e9e4da;
+  --color-ink-mid: #a49c8f;
+  --color-ink-faint: #7a7267;
+
+  /* One restrained accent: warm amber. */
+  --color-accent: #d7a04a;
+  --color-accent-hover: #e3b264;
+  --color-accent-ink: #221807;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background-color: var(--color-bg);
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}

@@ -124,39 +124,39 @@ export default function App() {
   const hasData = postings.length > 0 || applications.length > 0;
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-4">
+    <div className="min-h-screen bg-bg font-sans text-ink antialiased">
+      <header className="border-b border-edge">
+        <div className="mx-auto flex max-w-5xl items-end justify-between gap-3 px-4 pb-5 pt-6">
           <div>
-            <h1 className="text-xl font-bold tracking-tight">
-              WaterlooWorks Wingman <span aria-hidden>🪿</span>
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">
+              WaterlooWorks Wingman
             </h1>
-            <p className="text-xs text-slate-500">
+            <p className="mt-1 text-xs text-ink-mid">
               Privacy-first co-op copilot — paste your postings, track, rank, and map your odds.
               Nothing leaves your browser.
             </p>
           </div>
           <button
             onClick={() => setSettingsOpen(true)}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-50"
+            className="rounded-md border border-edge-strong px-3 py-1.5 text-sm text-ink-mid transition hover:border-accent/40 hover:text-ink"
             aria-label="Open settings"
           >
-            ⚙️ Settings
+            Settings
           </button>
         </div>
       </header>
 
       {!keyed && (
-        <div className="border-b border-amber-200 bg-amber-50">
-          <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-2 px-4 py-2.5 text-sm text-amber-800">
+        <div className="border-b border-accent/15 bg-accent/[0.06]">
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-2 px-4 py-2.5 text-sm text-amber-200/90">
             <span>
-              <span className="font-medium">No API key set.</span> Demo data, the tracker and
-              competition odds work without one — parsing your own pastes and AI ranking need a
-              free Gemini or Groq key.
+              <span className="font-medium text-amber-100">No API key set.</span> Demo data, the
+              tracker and competition odds work without one — parsing your own pastes and AI
+              ranking need a free Gemini or Groq key.
             </span>
             <button
               onClick={() => setSettingsOpen(true)}
-              className="rounded-md bg-amber-500 px-2.5 py-1 text-xs font-semibold text-white hover:bg-amber-600"
+              className="rounded-md bg-accent px-2.5 py-1 text-xs font-semibold text-accent-ink transition hover:bg-accent-hover"
             >
               Add key
             </button>
@@ -164,31 +164,35 @@ export default function App() {
         </div>
       )}
 
-      <nav className="mx-auto mt-4 max-w-5xl px-4">
-        <div className="flex flex-wrap items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+      <nav className="mx-auto max-w-5xl px-4">
+        <div className="flex flex-wrap items-baseline gap-6 border-b border-edge">
           {TABS.map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+              className={`-mb-px border-b-2 pb-2.5 pt-4 font-display text-base transition ${
                 tab === t.id
-                  ? 'bg-slate-800 text-white'
-                  : 'text-slate-600 hover:bg-slate-100'
+                  ? 'border-accent text-ink'
+                  : 'border-transparent text-ink-mid hover:text-ink'
               }`}
             >
               {t.label}
               {t.id === 'tracker' && applications.length > 0 && (
-                <span className="ml-1.5 text-xs opacity-70">{applications.length}</span>
+                <span className="ml-1.5 font-sans text-xs text-ink-faint">
+                  {applications.length}
+                </span>
               )}
               {t.id === 'shortlist' && postings.length > 0 && (
-                <span className="ml-1.5 text-xs opacity-70">{postings.length}</span>
+                <span className="ml-1.5 font-sans text-xs text-ink-faint">
+                  {postings.length}
+                </span>
               )}
             </button>
           ))}
           {hasData && (
             <button
               onClick={clearAll}
-              className="ml-auto rounded-lg px-3 py-2 text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              className="ml-auto self-center rounded-md px-2 py-1 text-xs text-ink-faint transition hover:text-ink-mid"
               title="Remove all parsed data from this browser"
             >
               Clear data
@@ -197,7 +201,7 @@ export default function App() {
         </div>
       </nav>
 
-      <main className="mx-auto max-w-5xl space-y-4 px-4 py-4">
+      <main className="mx-auto max-w-5xl space-y-5 px-4 py-6">
         {tab === 'tracker' && <Tracker applications={applications} termStat={termStat} />}
 
         {tab === 'shortlist' && (
@@ -232,7 +236,7 @@ export default function App() {
         )}
       </main>
 
-      <footer className="mx-auto max-w-5xl px-4 pb-8 pt-2 text-center text-xs text-slate-400">
+      <footer className="mx-auto max-w-5xl px-4 pb-10 pt-4 text-center text-xs text-ink-faint">
         <p>
           All data stays in your browser (localStorage only). Your API key is sent solely to the
           LLM provider you picked. Embeddings run on-device via transformers.js. No backend, no

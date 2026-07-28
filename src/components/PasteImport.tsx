@@ -61,10 +61,10 @@ export default function PasteImport({
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-lg border border-edge bg-surface p-4">
       <div className="mb-2 flex items-baseline justify-between gap-2">
-        <h2 className="text-sm font-semibold text-slate-700">Import your data</h2>
-        <span className="text-xs text-slate-400">
+        <h2 className="font-display text-base text-ink">Import your data</h2>
+        <span className="text-xs text-ink-faint">
           copy–paste straight from WaterlooWorks — messy formatting is fine
         </span>
       </div>
@@ -75,34 +75,34 @@ export default function PasteImport({
         placeholder={
           'Paste here: either a batch of job postings (detail pages or list view) or your "My Applications" table…'
         }
-        className="w-full resize-y rounded-lg border border-slate-300 p-3 font-mono text-xs outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+        className="w-full resize-y rounded-md border border-edge-strong bg-bg p-3 font-mono text-xs text-ink outline-none placeholder:text-ink-faint focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
       />
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <button
           onClick={() => void run('postings')}
           disabled={busy !== null}
-          className="rounded-lg bg-slate-800 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-md border border-edge-strong bg-surface-2 px-3 py-1.5 text-sm font-medium text-ink transition hover:border-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy === 'postings' ? 'Parsing…' : 'Parse as postings'}
         </button>
         <button
           onClick={() => void run('applications')}
           disabled={busy !== null}
-          className="rounded-lg bg-slate-800 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-md border border-edge-strong bg-surface-2 px-3 py-1.5 text-sm font-medium text-ink transition hover:border-accent/40 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy === 'applications' ? 'Parsing…' : 'Parse as My Applications'}
         </button>
-        <span className="text-xs text-slate-400">or</span>
+        <span className="text-xs text-ink-faint">or</span>
         <button
           onClick={onLoadDemo}
-          className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-800 transition hover:bg-amber-100"
+          className="rounded-md border border-accent/40 px-3 py-1.5 text-sm font-medium text-accent transition hover:bg-accent/10"
         >
           Load demo data
         </button>
       </div>
-      {message && <p className="mt-2 text-sm text-emerald-600">{message}</p>}
+      {message && <p className="mt-2 text-sm text-emerald-300">{message}</p>}
       {error && (
-        <p className="mt-2 text-sm text-rose-600">
+        <p className="mt-2 text-sm text-rose-300">
           {error}{' '}
           {error.includes('Settings') && (
             <button onClick={onOpenSettings} className="font-medium underline">

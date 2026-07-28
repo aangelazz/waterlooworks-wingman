@@ -12,17 +12,19 @@ export function OddsBadge({ posting }: { posting: Posting }) {
   return (
     <span
       title={`Odds score ${score}/100 (from applications-per-opening ratio)`}
-      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap ${meta.className}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap ${meta.className}`}
     >
-      {meta.emoji} {detail}
+      <span aria-hidden className={`h-1.5 w-1.5 shrink-0 rounded-full ${meta.dotClass}`} />
+      {detail}
     </span>
   );
 }
 
 function ScorePill({ label, value }: { label: string; value: number | null }) {
   return (
-    <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600">
-      {label} <span className="font-semibold text-slate-800">{value ?? '–'}</span>
+    <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[11px] text-ink-mid">
+      {label}{' '}
+      <span className="font-semibold tabular-nums text-ink">{value ?? '–'}</span>
     </span>
   );
 }
@@ -44,38 +46,40 @@ export default function PostingCard({
     .join(' · ');
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-lg border border-edge bg-surface p-4 transition-colors hover:border-edge-strong">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <h3 className="font-semibold text-slate-800">{posting.title}</h3>
-          <p className="text-sm text-slate-500">
+          <h3 className="font-semibold text-ink">{posting.title}</h3>
+          <p className="text-sm text-ink-mid">
             {posting.organization}
             {posting.division ? ` · ${posting.division}` : ''}
           </p>
-          {meta && <p className="mt-0.5 text-xs text-slate-400">{meta}</p>}
+          {meta && <p className="mt-0.5 text-xs text-ink-faint">{meta}</p>}
         </div>
         <OddsBadge posting={posting} />
       </div>
 
       {analysis && (
-        <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
-          <p className="text-sm text-slate-600">{analysis.rationale}</p>
+        <div className="mt-3 space-y-2 border-t border-edge pt-3">
+          <p className="text-sm text-ink-mid">{analysis.rationale}</p>
           {(analysis.greenFlags.length > 0 || analysis.redFlags.length > 0) && (
             <div className="flex flex-wrap gap-1.5">
               {analysis.greenFlags.map((f) => (
                 <span
                   key={f}
-                  className="rounded-md bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-300"
                 >
-                  ✓ {f}
+                  <span aria-hidden className="h-1 w-1 shrink-0 rounded-full bg-emerald-400" />
+                  {f}
                 </span>
               ))}
               {analysis.redFlags.map((f) => (
                 <span
                   key={f}
-                  className="rounded-md bg-rose-50 px-2 py-0.5 text-xs text-rose-700"
+                  className="inline-flex items-center gap-1.5 rounded-md bg-rose-500/10 px-2 py-0.5 text-xs text-rose-300"
                 >
-                  ⚠ {f}
+                  <span aria-hidden className="h-1 w-1 shrink-0 rounded-full bg-rose-400" />
+                  {f}
                 </span>
               ))}
             </div>

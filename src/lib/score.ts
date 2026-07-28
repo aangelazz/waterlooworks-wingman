@@ -32,27 +32,27 @@ export function oddsBand(
 
 export const ODDS_BAND_META: Record<
   OddsBand,
-  { emoji: string; label: string; className: string }
+  { dotClass: string; label: string; className: string }
 > = {
   good: {
-    emoji: '🟢',
+    dotClass: 'bg-emerald-400',
     label: 'good odds',
-    className: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+    className: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
   },
   competitive: {
-    emoji: '🟡',
+    dotClass: 'bg-amber-400',
     label: 'competitive',
-    className: 'bg-amber-100 text-amber-800 border-amber-300',
+    className: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
   },
   longshot: {
-    emoji: '🔴',
+    dotClass: 'bg-rose-400',
     label: 'long shot',
-    className: 'bg-rose-100 text-rose-800 border-rose-300',
+    className: 'border-rose-500/30 bg-rose-500/10 text-rose-300',
   },
   unknown: {
-    emoji: '⚪',
+    dotClass: 'bg-stone-500',
     label: 'no count data',
-    className: 'bg-slate-100 text-slate-600 border-slate-300',
+    className: 'border-edge-strong bg-surface-2 text-ink-mid',
   },
 };
 
